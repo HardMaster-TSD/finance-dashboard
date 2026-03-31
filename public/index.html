@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💰 消费账单 - 财神 Cathy</title>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --text: #f5f5f7;
+      --text-secondary: #9ca3af;
+      --accent: #818cf8;
+      --positive: #34d399;
+      --negative: #f87171;
+      --border: rgba(255,255,255,0.1);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f0f2f5;
+        --card-bg: #ffffff;
+        --text: #1a1a2e;
+        --text-secondary: #6b7280;
+        --accent: #4f46e5;
+        --positive: #10b981;
+        --negative: #ef4444;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    header h1 { font-size: 24px; margin-bottom: 4px; }
+    header .subtitle { color: var(--text-secondary); font-size: 14px; }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 16px; font-weight: 600; }
+    .total-amount {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--accent);
+      text-align: center;
+      margin: 20px 0;
+    }
+    .total-amount small { font-size: 14px; color: var(--text-secondary); font-weight: 400; }
+    .category-list { display: flex; flex-direction: column; gap: 12px; }
+    .category-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .category-name { width: 60px; font-size: 14px; color: var(--text-secondary); }
+    .category-bar {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .category-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .category-value { width: 80px; text-align: right; font-size: 14px; font-weight: 600; }
+    .expense-list { display: flex; flex-direction: column; gap: 8px; }
+    .expense-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+    }
+    .expense-left { display: flex; flex-direction: column; gap: 2px; }
+    .expense-desc { font-size: 14px; font-weight: 500; }
+    .expense-date { font-size: 12px; color: var(--text-secondary); }
+    .expense-amount { font-size: 16px; font-weight: 600; color: var(--negative); }
+    .month-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .month-btn {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .month-btn.active, .month-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .add-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .add-form input, .add-form select {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font-size: 14px;
+    }
+    .add-form input:focus, .add-form select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .add-form button {
+      grid-column: 1 / -1;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .add-form button:hover { opacity: 0.9; }
+    .empty { text-align: center; color: var(--text-secondary); padding: 40px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>💰 消费账单</h1>
+      <p class="subtitle">财神 Cathy · 帮你管钱</p>
+    </header>
+
+    <div class="month-selector" id="monthSelector"></div>
+
+    <!-- 总览卡片 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">💳 总支出</span>
+      </div>
+      <div class="total-amount" id="totalAmount">¥0<small> / 月</small></div>
+      <div class="category-list" id="categoryList"></div>
+    </div>
+
+    <!-- 消费明细 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📋 消费明细</span>
+      </div>
+      <div class="expense-list" id="expenseList">
+        <div class="empty">暂无记录</div>
+      </div>
+    </div>
+
+    <!-- 添加记录 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">➕ 记一笔</span>
+      </div>
+      <form class="add-form" id="addForm">
+        <input type="date" id="date" required>
+        <input type="number" id="amount" placeholder="金额" min="0" step="0.01" required>
+        <select id="category">
+          <option value="餐饮">餐饮</option>
+          <option value="交通">交通</option>
+          <option value="购物">购物</option>
+          <option value="娱乐">娱乐</option>
+          <option value="其他">其他</option>
+        </select>
+        <input type="text" id="desc" placeholder="备注">
+        <button type="submit">添加记录</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentMonth = new Date().toISOString().slice(0, 7);
+    const CATEGORIES = ['餐饮', '交通', '购物', '娱乐', '其他'];
+    const COLORS = ['#818cf8', '#34d399', '#f87171', '#fbbf24', '#9ca3af'];
+
+    // 设置默认日期为今天
+    document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+
+    async function loadMonths() {
+      const res = await fetch('/api/months');
+      const months = await res.json();
+      const selector = document.getElementById('monthSelector');
+      
+      // 默认显示当前月
+      if (!months.includes(currentMonth)) {
+        months.unshift(currentMonth);
+      }
+      
+      selector.innerHTML = months.map(m => 
+        `<button class="month-btn ${m === currentMonth ? 'active' : ''}" onclick="selectMonth('${m}')">${m}</button>`
+      ).join('');
+    }
+
+    async function selectMonth(month) {
+      currentMonth = month;
+      document.querySelectorAll('.month-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === month);
+      });
+      await loadData();
+    }
+
+    async function loadData() {
+      const res = await fetch(`/api/expenses/${currentMonth}`);
+      const data = await res.json();
+      
+      // 更新总支出
+      document.getElementById('totalAmount').innerHTML = 
+        `¥${data.total}<small> / 月</small>`;
+      
+      // 更新分类
+      const categoryList = document.getElementById('categoryList');
+      if (Object.keys(data.categories).length === 0) {
+        categoryList.innerHTML = '<div class="empty">暂无数据</div>';
+      } else {
+        categoryList.innerHTML = CATEGORIES.map((cat, i) => {
+          const amount = data.categories[cat] || 0;
+          const pct = data.total > 0 ? (amount / data.total * 100) : 0;
+          return `
+            <div class="category-item">
+              <span class="category-name">${cat}</span>
+              <div class="category-bar">
+                <div class="category-fill" style="width:${pct}%;background:${COLORS[i]}"></div>
+              </div>
+              <span class="category-value">¥${amount}</span>
+            </div>
+          `;
+        }).join('');
+      }
+      
+      // 更新明细
+      const expenseList = document.getElementById('expenseList');
+      if (data.expenses.length === 0) {
+        expenseList.innerHTML = '<div class="empty">暂无记录</div>';
+      } else {
+        expenseList.innerHTML = data.expenses.map(e => `
+          <div class="expense-item">
+            <div class="expense-left">
+              <span class="expense-desc">${e.desc || e.category}</span>
+              <span class="expense-date">${e.date}</span>
+            </div>
+            <span class="expense-amount">-¥${e.amount}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 添加记录
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        date: document.getElementById('date').value,
+        amount: document.getElementById('amount').value,
+        category: document.getElementById('category').value,
+        desc: document.getElementById('desc').value
+      };
+      
+      await fetch(`/api/expenses/${currentMonth}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      // 重置表单
+      document.getElementById('amount').value = '';
+      document.getElementById('desc').value = '';
+      document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+      
+      await loadData();
+      await loadMonths();
+    });
+
+    loadMonths();
+    loadData();
+  </script>
+</body>
+</html>
